@@ -16,7 +16,7 @@ final class FaceEngine {
     private static final String TAG = "FaceEngine";
 
     /** Model pack to load. PIKACHU is the lightweight mobile pack. */
-    private static final String MODEL_PACK = InspireFace.PIKACHU;
+    private static final String MODEL_PACK = InspireFace.MEGATRON;
 
     /** Max faces tracked per frame — enough to notice "more than one face" and stay cheap. */
     private static final int MAX_FACES = 3;
