@@ -94,4 +94,6 @@ CameraX ImageAnalysis (YUV_420_888, 640x480, KEEP_ONLY_LATEST)
 ./gradlew :app:installDebug
 ```
 
-`MainActivity` 保留为 SDK API 冒烟测试(非启动入口)。
+需要更完整的 SDK 能力示例(识别、FeatureHub 检索)请参考上游
+[InspireFace](https://github.com/HyperInspire/InspireFace) 的 Android example——本仓库已移除
+原模板的冒烟测试 Activity(可从 git 历史找回)。

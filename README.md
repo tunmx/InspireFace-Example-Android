@@ -111,4 +111,6 @@ The first launch is slower while the model pack is unpacked from assets.
 ./gradlew :app:installDebug
 ```
 
-`MainActivity` is kept as an SDK API smoke test (not the launcher).
+Looking for the wider SDK surface (recognition, FeatureHub search)? See the upstream
+[InspireFace](https://github.com/HyperInspire/InspireFace) Android example — the original
+smoke-test activity was removed from this repo (recoverable from git history).
