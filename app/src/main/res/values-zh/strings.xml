@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">InspireFace 示例</string>
+
+    <!-- 活体检测页面 -->
+    <string name="mode_silent">静默活体</string>
+    <string name="mode_action">动作活体</string>
+    <string name="mode_pose">姿态识别</string>
+    <string name="msg_initializing">引擎初始化中…</string>
+    <string name="msg_no_face">请将脸部对准取景框</string>
+    <string name="msg_multiple_faces">请保持画面中只有一张人脸</string>
+    <string name="msg_face_too_small">请靠近一点</string>
+    <string name="msg_permission_required">需要相机权限才能使用</string>
+    <string name="msg_engine_failed">人脸引擎初始化失败</string>
+    <string name="msg_no_front_camera">此设备没有前置相机</string>
+
+    <string name="silent_real">真人</string>
+    <string name="silent_fake">疑似攻击</string>
+    <string name="silent_analyzing">检测中…</string>
+    <string name="silent_score">活体分数 %1$.2f</string>
+
+    <string name="action_get_ready">请正对相机并保持稳定</string>
+    <string name="action_blink">请眨眼</string>
+    <string name="action_shake">请左右摇头</string>
+    <string name="action_jaw_open">请张张嘴</string>
+    <string name="action_head_raise">请抬头</string>
+    <string name="action_step">第 %1$d / %2$d 步</string>
+    <string name="action_time_left">剩余 %1$d 秒</string>
+    <string name="action_passed">活体检测通过</string>
+    <string name="action_failed_timeout">超时,检测失败</string>
+    <string name="action_face_lost">人脸丢失,请重新开始</string>
+    <string name="btn_restart">重新开始</string>
+
+    <string name="pose_hint">做个动作试试:眨眼、摇头、张嘴、抬头</string>
+    <string name="name_blink">眨眼</string>
+    <string name="name_shake">摇头</string>
+    <string name="name_jaw_open">张嘴</string>
+    <string name="name_head_raise">抬头</string>
+
+    <string name="perf_format">%1$.1f FPS · %2$d ms</string>
+    <string name="switch_euler">欧拉角</string>
+    <string name="switch_landmarks">关键点</string>
+    <!-- Label of the language toggle: names the language it switches TO. -->
+    <string name="lang_switch">English</string>
+</resources>

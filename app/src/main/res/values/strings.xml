@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">InspireFace-Example</string>
+
+    <!-- Liveness screen -->
+    <string name="mode_silent">Silent</string>
+    <string name="mode_action">Actions</string>
+    <string name="mode_pose">Pose</string>
+    <string name="msg_initializing">Initializing engine…</string>
+    <string name="msg_no_face">Align your face within the frame</string>
+    <string name="msg_multiple_faces">Keep only one face in view</string>
+    <string name="msg_face_too_small">Move closer to the camera</string>
+    <string name="msg_permission_required">Camera permission is required</string>
+    <string name="msg_engine_failed">Failed to initialize the face engine</string>
+    <string name="msg_no_front_camera">No front camera on this device</string>
+
+    <string name="silent_real">Live face</string>
+    <string name="silent_fake">Spoof suspected</string>
+    <string name="silent_analyzing">Analyzing…</string>
+    <string name="silent_score">Liveness score %1$.2f</string>
+
+    <string name="action_get_ready">Face the camera and hold still</string>
+    <string name="action_blink">Please blink</string>
+    <string name="action_shake">Please shake your head</string>
+    <string name="action_jaw_open">Please open your mouth</string>
+    <string name="action_head_raise">Please raise your head</string>
+    <string name="action_step">Step %1$d / %2$d</string>
+    <string name="action_time_left">%1$ds left</string>
+    <string name="action_passed">Liveness check passed</string>
+    <string name="action_failed_timeout">Timed out, check failed</string>
+    <string name="action_face_lost">Face lost, please try again</string>
+    <string name="btn_restart">Restart</string>
+
+    <string name="pose_hint">Try an action: blink, shake, open mouth, raise head</string>
+    <string name="name_blink">Blink</string>
+    <string name="name_shake">Head shake</string>
+    <string name="name_jaw_open">Mouth open</string>
+    <string name="name_head_raise">Head raise</string>
+
+    <string name="perf_format">%1$.1f FPS · %2$d ms</string>
+    <string name="switch_euler">Euler angles</string>
+    <string name="switch_landmarks">Landmarks</string>
+    <!-- Label of the language toggle: names the language it switches TO. -->
+    <string name="lang_switch">中文</string>
+    <string name="euler_format">Yaw %1$.1f° · Pitch %2$.1f° · Roll %3$.1f°</string>
+    <string name="euler_no_face">—</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Liveness screen -->
+    <color name="liveness_accent">#FF00E5A0</color>
+    <color name="liveness_warn">#FFFFC400</color>
+    <color name="liveness_fail">#FFFF5252</color>
+    <color name="liveness_scrim">#99000000</color>
+    <color name="liveness_chip_bg">#B3000000</color>
+</resources>
