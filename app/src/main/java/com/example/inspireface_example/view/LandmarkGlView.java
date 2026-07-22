@@ -1,4 +1,4 @@
-package com.example.inspireface_example.liveness;
+package com.example.inspireface_example.view;
 
 import android.content.Context;
 import android.graphics.Color;

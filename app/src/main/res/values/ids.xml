@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Kept while the landmark switch is commented out of activity_liveness.xml, so the
-         null-guarded findViewById in LivenessActivity still compiles. -->
-    <item name="switchLandmarks" type="id" />
-</resources>

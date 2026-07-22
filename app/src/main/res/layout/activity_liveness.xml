@@ -13,13 +13,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.example.inspireface_example.liveness.LandmarkGlView
+    <com.example.inspireface_example.view.LandmarkGlView
         android:id="@+id/landmarkGlView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <com.example.inspireface_example.liveness.FaceOverlayView
+    <com.example.inspireface_example.view.FaceOverlayView
         android:id="@+id/faceOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
@@ -34,44 +34,55 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp">
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/modeToggle"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            app:selectionRequired="true"
-            app:singleSelection="true">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModeSilent"
-                style="?attr/materialButtonOutlinedStyle"
+            <TextView
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_chip"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:minWidth="40dp"
+                android:text="@string/back"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/pageTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="Silent liveness" />
+
+            <TextView
+                android:id="@+id/currentModel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:text="@string/mode_silent"
-                android:textColor="@color/white"
-                app:strokeColor="@color/liveness_accent" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModeAction"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:text="@string/mode_action"
-                android:textColor="@color/white"
-                app:strokeColor="@color/liveness_accent" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnModePose"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:text="@string/mode_pose"
-                android:textColor="@color/white"
-                app:strokeColor="@color/liveness_accent" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
+                android:background="@drawable/bg_chip"
+                android:gravity="center"
+                android:maxLines="1"
+                android:paddingStart="10dp"
+                android:paddingTop="5dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="5dp"
+                android:textColor="@color/liveness_accent"
+                android:textSize="11sp"
+                tools:text="Model · Megatron" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/perfText"
@@ -102,18 +113,19 @@
                 android:textColor="@color/white"
                 android:textSize="12sp" />
 
-            <!-- Landmark rendering switch — temporarily hidden. Uncomment to restore;
-                 the Java wiring in LivenessActivity null-guards its absence. -->
-            <!--
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switchLandmarks"
+            <TextView
+                android:id="@+id/btnFlipCamera"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="@string/switch_landmarks"
+                android:background="@drawable/bg_chip"
+                android:paddingStart="14dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="6dp"
+                android:text="@string/flip_camera"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
-            -->
+                android:textSize="13sp" />
         </LinearLayout>
 
         <TextView
@@ -213,6 +225,16 @@
                 android:text="@string/btn_restart"
                 android:textColor="@color/black"
                 android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCameraPermissionAction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/camera_permission_try_again"
+                android:textColor="@color/black"
+                android:visibility="gone"
+                app:backgroundTint="@color/liveness_accent" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
     </LinearLayout>

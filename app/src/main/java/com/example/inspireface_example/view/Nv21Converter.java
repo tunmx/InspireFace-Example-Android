@@ -1,4 +1,4 @@
-package com.example.inspireface_example.liveness;
+package com.example.inspireface_example.view;
 
 import androidx.camera.core.ImageProxy;
 

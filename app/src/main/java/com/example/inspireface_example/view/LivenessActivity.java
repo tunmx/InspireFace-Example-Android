@@ -1,57 +1,40 @@
-package com.example.inspireface_example.liveness;
+package com.example.inspireface_example.view;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Size;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.CameraInfoUnavailableException;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.Preview;
-import androidx.camera.core.resolutionselector.AspectRatioStrategy;
-import androidx.camera.core.resolutionselector.ResolutionSelector;
-import androidx.camera.core.resolutionselector.ResolutionStrategy;
-import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.inspireface_example.FaceModelPrefs;
 import com.example.inspireface_example.LocalePrefs;
 import com.example.inspireface_example.R;
-import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.example.inspireface_example.permission.CameraPermissionCoordinator;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.insightface.sdk.inspireface.base.FaceEulerAngle;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Front-camera liveness test screen with two switchable modes: silent RGB anti-spoofing
- * and cooperative action challenges. Frames reach InspireFace as NV21 through
- * CreateImageStreamFromByteBuffer for the lowest-latency path.
+ * Shared camera screen used by the three dedicated feature activities. Subclasses choose
+ * one fixed controller mode while this class owns the common CameraX and overlay lifecycle.
  */
 public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.Listener {
 
     private PreviewView previewView;
     private FaceOverlayView overlayView;
     private LandmarkGlView landmarkView;
-    private SwitchMaterial switchLandmarks;
     private TextView promptTitle;
     private TextView promptSub;
     private TextView perfText;
@@ -64,19 +47,25 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
     private LivenessController controller;
     private FaceAnalyzer analyzer;
     private LivenessController.UiState lastState;
-
-    private final ActivityResultLauncher<String> cameraPermission =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
-                if (granted) {
-                    startEngine();
-                } else {
-                    promptTitle.setText(R.string.msg_permission_required);
-                }
-            });
+    private CameraPreviewController cameraController;
+    private CameraPermissionCoordinator cameraPermission;
+    private boolean engineStartingOrReady;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        cameraPermission = new CameraPermissionCoordinator(this,
+                new CameraPermissionCoordinator.Listener() {
+                    @Override
+                    public void onCameraPermissionGranted() {
+                        startEngine();
+                    }
+
+                    @Override
+                    public void onCameraPermissionBlocked(boolean requiresSettings) {
+                        showCameraPermissionBlocked(requiresSettings);
+                    }
+                });
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_liveness);
 
@@ -88,9 +77,15 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
         perfText = findViewById(R.id.perfText);
         eulerText = findViewById(R.id.eulerText);
         switchEuler = findViewById(R.id.switchEuler);
-        switchLandmarks = findViewById(R.id.switchLandmarks);
         promptProgress = findViewById(R.id.promptProgress);
         btnRestart = findViewById(R.id.btnRestart);
+        cameraPermission.bindRecoveryButton(
+                findViewById(R.id.btnCameraPermissionAction));
+
+        ((TextView) findViewById(R.id.pageTitle)).setText(pageTitleRes());
+        ((TextView) findViewById(R.id.currentModel)).setText(
+                getString(R.string.current_model, FaceModelPrefs.get(this).sdkName()));
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
         switchEuler.setOnCheckedChangeListener((button, checked) -> {
             if (analyzer != null) {
@@ -99,47 +94,16 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
             eulerText.setText(R.string.euler_no_face);
             eulerText.setVisibility(checked ? View.VISIBLE : View.GONE);
         });
-        // The landmark switch is commented out of the layout for now; keep the wiring
-        // null-guarded so restoring the XML is all it takes to re-enable it.
-        if (switchLandmarks != null) {
-            switchLandmarks.setOnCheckedChangeListener((button, checked) -> {
-                if (analyzer != null) {
-                    analyzer.setLandmarksEnabled(checked);
-                }
-                if (!checked) {
-                    landmarkView.clearPoints();
-                }
-                landmarkView.setVisibility(checked ? View.VISIBLE : View.GONE);
-            });
-        }
-
         applyWindowInsets();
 
         controller = new LivenessController(this);
-
-        MaterialButtonToggleGroup modeToggle = findViewById(R.id.modeToggle);
-        modeToggle.check(R.id.btnModeSilent);
-        modeToggle.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (isChecked) {
-                if (checkedId == R.id.btnModeSilent) {
-                    controller.setMode(LivenessController.Mode.SILENT);
-                } else if (checkedId == R.id.btnModeAction) {
-                    controller.setMode(LivenessController.Mode.ACTION);
-                } else {
-                    controller.setMode(LivenessController.Mode.POSE);
-                }
-            }
-        });
+        controller.setMode(initialMode());
         btnRestart.setOnClickListener(v -> controller.restart());
         // In-app language toggle (bottom-right): English by default, Chinese on demand.
         findViewById(R.id.langSwitch).setOnClickListener(v -> LocalePrefs.toggle(this));
+        findViewById(R.id.btnFlipCamera).setOnClickListener(v -> flipCamera());
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED) {
-            startEngine();
-        } else {
-            cameraPermission.launch(Manifest.permission.CAMERA);
-        }
+        cameraPermission.requestAccess();
     }
 
     private void applyWindowInsets() {
@@ -160,7 +124,12 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
 
     /** GlobalLaunch copies model assets on first run — keep it off the main thread. */
     private void startEngine() {
+        if (engineStartingOrReady) {
+            return;
+        }
+        engineStartingOrReady = true;
         promptTitle.setText(R.string.msg_initializing);
+        promptSub.setVisibility(View.GONE);
         analysisExecutor.execute(() -> {
             boolean ok = FaceEngine.ensureLaunched(this);
             runOnUiThread(() -> {
@@ -170,61 +139,69 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
                 if (ok) {
                     bindCamera();
                 } else {
+                    engineStartingOrReady = false;
                     promptTitle.setText(R.string.msg_engine_failed);
                 }
             });
         });
     }
 
+    private void showCameraPermissionBlocked(boolean requiresSettings) {
+        promptTitle.setText(R.string.msg_permission_required);
+        promptSub.setText(requiresSettings
+                ? R.string.camera_permission_settings_hint
+                : R.string.camera_permission_retry_hint);
+        promptSub.setVisibility(View.VISIBLE);
+    }
+
     private void bindCamera() {
-        ListenableFuture<ProcessCameraProvider> future = ProcessCameraProvider.getInstance(this);
-        future.addListener(() -> {
-            if (isDestroyed() || isFinishing()) {
-                return;
-            }
-            ProcessCameraProvider provider;
-            try {
-                provider = future.get();
-            } catch (ExecutionException | InterruptedException e) {
-                promptTitle.setText(R.string.msg_engine_failed);
-                return;
-            }
-            try {
-                if (!provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
-                    promptTitle.setText(R.string.msg_no_front_camera);
-                    return;
-                }
-            } catch (CameraInfoUnavailableException e) {
-                promptTitle.setText(R.string.msg_no_front_camera);
-                return;
-            }
+        analyzer = new FaceAnalyzer(controller, overlayView, landmarkView, this, true);
+        analyzer.setEulerEnabled(switchEuler.isChecked());
+        analyzer.setLandmarksEnabled(false);
+        cameraController = new CameraPreviewController(
+                this, this, previewView, analysisExecutor, analyzer,
+                new CameraPreviewController.Listener() {
+                    @Override
+                    public void onCameraReady(boolean frontCamera) {
+                        analyzer.setMirrored(frontCamera);
+                    }
 
-            // 640x480 keeps NV21 conversion + tracking cheap; 4:3 on both use cases keeps
-            // the overlay mapping consistent with what PreviewView shows.
-            ResolutionSelector analysisResolution = new ResolutionSelector.Builder()
-                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-                    .setResolutionStrategy(new ResolutionStrategy(new Size(640, 480),
-                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
-                    .build();
-            ImageAnalysis analysis = new ImageAnalysis.Builder()
-                    .setResolutionSelector(analysisResolution)
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build();
-            analyzer = new FaceAnalyzer(controller, overlayView, landmarkView, this, true);
-            analyzer.setEulerEnabled(switchEuler.isChecked());
-            analyzer.setLandmarksEnabled(switchLandmarks != null && switchLandmarks.isChecked());
-            analysis.setAnalyzer(analysisExecutor, analyzer);
+                    @Override
+                    public void onLensChanged(boolean frontCamera) {
+                        analyzer.setMirrored(frontCamera);
+                        controller.restart();
+                        overlayView.submit(null);
+                        landmarkView.clearPoints();
+                    }
 
-            Preview preview = new Preview.Builder()
-                    .setResolutionSelector(new ResolutionSelector.Builder()
-                            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-                            .build())
-                    .build();
-            preview.setSurfaceProvider(previewView.getSurfaceProvider());
+                    @Override
+                    public void onCameraError(int messageRes) {
+                        promptTitle.setText(messageRes);
+                    }
+                });
+        cameraController.start();
+    }
 
-            provider.unbindAll();
-            provider.bindToLifecycle(this, CameraSelector.DEFAULT_FRONT_CAMERA, preview, analysis);
-        }, ContextCompat.getMainExecutor(this));
+    /**
+     * Switches between the front and back lens. The SDK needs no per-lens handling:
+     * every frame is pre-rotated by its own rotationDegrees before
+     * CreateImageStreamFromByteBuffer (always CAMERA_ROTATION_0), so the new lens's
+     * different sensor orientation is absorbed per frame. Only the display mirroring
+     * flips, and the mode state restarts so stale tracking can't leak across lenses.
+     */
+    private void flipCamera() {
+        if (cameraController == null || !cameraController.flipCamera()) {
+            Toast.makeText(this, R.string.msg_camera_unavailable, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** Silent liveness is the behavior of the original activity and the first home tile. */
+    protected LivenessController.Mode initialMode() {
+        return LivenessController.Mode.SILENT;
+    }
+
+    protected int pageTitleRes() {
+        return R.string.mode_silent;
     }
 
     // ------------------------------------------------------------------
@@ -288,6 +265,12 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
     // multi-window the activity can be paused but visible with the camera and analysis
     // still running — the landmark overlay must keep rendering there.
     @Override
+    protected void onResume() {
+        super.onResume();
+        cameraPermission.onResume();
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
         landmarkView.onResume();
@@ -301,11 +284,15 @@ public class LivenessActivity extends AppCompatActivity implements FaceAnalyzer.
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        cameraPermission.close();
+        if (cameraController != null) {
+            cameraController.stop();
+        }
         if (analyzer != null) {
             FaceAnalyzer toRelease = analyzer;
             analysisExecutor.execute(toRelease::release);
         }
         analysisExecutor.shutdown();
+        super.onDestroy();
     }
 }

@@ -1,11 +1,9 @@
-package com.example.inspireface_example.liveness;
+package com.example.inspireface_example.view;
 
 import android.graphics.RectF;
 import android.os.SystemClock;
 
-import androidx.annotation.NonNull;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageProxy;
+import androidx.annotation.Nullable;
 
 import com.insightface.sdk.inspireface.InspireFace;
 import com.insightface.sdk.inspireface.base.FaceEulerAngle;
@@ -26,7 +24,7 @@ import com.insightface.sdk.inspireface.base.Session;
  * created, used and released within this frame because the SDK aliases the byte[]
  * rather than copying it.
  */
-final class FaceAnalyzer implements ImageAnalysis.Analyzer {
+final class FaceAnalyzer extends UprightFaceCameraAnalyzer {
 
     interface Listener {
         /** Called on the analysis thread. */
@@ -50,17 +48,14 @@ final class FaceAnalyzer implements ImageAnalysis.Analyzer {
 
     private static final int LANDMARK_FLOATS = 106 * 2;
 
-    private final Nv21Converter converter = new Nv21Converter();
     private final LivenessController controller;
     private final FaceOverlayView overlay;
     private final LandmarkGlView landmarkView;
     private final Listener listener;
-    private final boolean mirrored;
+    /** Front camera previews are displayed mirrored, back camera ones are not. */
+    private volatile boolean mirrored;
     private float[] landmarkScratch = new float[LANDMARK_FLOATS];
 
-    private Session session;
-    private boolean sessionFailed;
-    private volatile boolean released;
     private volatile boolean eulerEnabled;
     private volatile boolean landmarksEnabled;
     private long lastEulerReport;
@@ -82,59 +77,43 @@ final class FaceAnalyzer implements ImageAnalysis.Analyzer {
     }
 
     @Override
-    public void analyze(@NonNull ImageProxy image) {
-        if (released || sessionFailed) {
-            image.close();
+    protected Session createSession() {
+        return FaceEngine.createPreviewSession();
+    }
+
+    @Override
+    protected void onFaces(Session session, ImageStream stream,
+                           @Nullable MultipleFaceData faces, byte[] uprightNv21,
+                           int uprightWidth, int uprightHeight, long frameStart) {
+        if (faces == null) {
             return;
         }
-        if (session == null) {
-            session = FaceEngine.createPreviewSession();
-            if (session == null) {
-                sessionFailed = true;
-                image.close();
-                listener.onSessionError();
-                return;
-            }
-        }
+        LivenessController.UiState state =
+                controller.onFrame(session, stream, faces, uprightWidth, uprightHeight);
+        overlay.submit(buildOverlayFrame(faces, uprightWidth, uprightHeight, state.boxColor));
+        listener.onUiState(state);
+        reportEulerAngles(faces);
+        renderLandmarks(faces, uprightWidth, uprightHeight);
+        trackPerf(frameStart);
+    }
 
-        long start = SystemClock.elapsedRealtime();
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int rotationDegrees = image.getImageInfo().getRotationDegrees();
-        byte[] nv21 = converter.convert(image);
-        image.close(); // buffer copied — hand it back to the camera immediately
-
-        byte[] upright = converter.rotateUpright(nv21, width, height, rotationDegrees);
-        boolean swapped = rotationDegrees == 90 || rotationDegrees == 270;
-        int uprightWidth = swapped ? height : width;
-        int uprightHeight = swapped ? width : height;
-
-        ImageStream stream = InspireFace.CreateImageStreamFromByteBuffer(
-                upright, uprightWidth, uprightHeight,
-                InspireFace.STREAM_YUV_NV21, InspireFace.CAMERA_ROTATION_0);
-        if (stream == null) {
-            return;
-        }
-        try {
-            MultipleFaceData faces = InspireFace.ExecuteFaceTrack(session, stream);
-            if (faces == null) {
-                return;
-            }
-            LivenessController.UiState state =
-                    controller.onFrame(session, stream, faces, uprightWidth, uprightHeight);
-            overlay.submit(buildOverlayFrame(faces, uprightWidth, uprightHeight, state.boxColor));
-            listener.onUiState(state);
-            reportEulerAngles(faces);
-            renderLandmarks(faces, uprightWidth, uprightHeight);
-        } finally {
-            InspireFace.ReleaseImageStream(stream);
-        }
-        trackPerf(start);
+    @Override
+    protected void onSessionError() {
+        listener.onSessionError();
     }
 
     /** Safe to call from any thread. */
     void setEulerEnabled(boolean enabled) {
         eulerEnabled = enabled;
+    }
+
+    /**
+     * Safe to call from any thread; flip together with the camera lens. Rotation needs
+     * no per-lens handling — every frame is pre-rotated by its own rotationDegrees — so
+     * mirroring is the only display difference between the lenses.
+     */
+    void setMirrored(boolean mirrored) {
+        this.mirrored = mirrored;
     }
 
     /** Safe to call from any thread. */
@@ -183,15 +162,6 @@ final class FaceAnalyzer implements ImageAnalysis.Analyzer {
         listener.onEulerAngles(faces.detectedNum > 0 ? faces.angles[0] : null);
     }
 
-    /** Must be invoked on the analysis executor. */
-    void release() {
-        released = true;
-        if (session != null) {
-            InspireFace.ReleaseSession(session);
-            session = null;
-        }
-    }
-
     /** The stream is already upright, so SDK rects map to the preview directly. */
     private FaceOverlayView.Frame buildOverlayFrame(MultipleFaceData faces,
                                                     int uprightWidth, int uprightHeight, int color) {
@@ -201,7 +171,8 @@ final class FaceAnalyzer implements ImageAnalysis.Analyzer {
                     faces.rects[i].x + faces.rects[i].width,
                     faces.rects[i].y + faces.rects[i].height);
         }
-        return new FaceOverlayView.Frame(uprightWidth, uprightHeight, mirrored, rects, color);
+        return new FaceOverlayView.Frame(
+                uprightWidth, uprightHeight, mirrored, rects, color);
     }
 
     private void trackPerf(long start) {

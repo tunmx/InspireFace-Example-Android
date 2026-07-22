@@ -22,4 +22,5 @@ Thumbs.db
 # --- Signing & release artifacts (keep keys out of the repo) ---
 *.jks
 *.keystore
+/keystore.properties
 /app/release/
