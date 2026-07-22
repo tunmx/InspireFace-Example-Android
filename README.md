@@ -1,7 +1,5 @@
 # InspireFace Android Example
 
-[中文文档](README_CN.md)
-
 A CameraX-based InspireFace Android SDK (1.2.0) example. The launcher is a square-grid
 feature menu with a global model selector (`Pikachu` / `Megatron`). The selected model is
 loaded when a feature page opens and is shown in a small label on every feature page.
