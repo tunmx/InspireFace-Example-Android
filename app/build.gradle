@@ -2,6 +2,13 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// Developer-supplied business credentials; never commit this file.
+def plusProperties = new Properties()
+def plusFile = rootProject.file('plus.local.properties')
+if (plusFile.exists()) {
+    plusFile.withInputStream { plusProperties.load(it) }
+}
+
 def releaseKeystoreProperties = new Properties()
 def releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
 def hasReleaseKeystore = releaseKeystorePropertiesFile.exists()
@@ -14,18 +21,21 @@ if (hasReleaseKeystore) {
 android {
     namespace 'com.example.inspireface_example'
     compileSdk 35
-    ndkVersion '28.1.13356709'
 
     defaultConfig {
         applicationId "com.example.inspireface_example"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 2
+        versionName "1.0.1"
+        buildConfigField 'String', 'PLUS_API_BASE', groovy.json.JsonOutput.toJson(
+                plusProperties.getProperty('apiBase', 'https://api.inspirehub.cc'))
+        buildConfigField 'String', 'PLUS_TOKEN', groovy.json.JsonOutput.toJson(
+                plusProperties.getProperty('token', ''))
 
         ndk {
-            // InspireFace 1.2.0 ships these two ABIs only.
-            abiFilters 'arm64-v8a', 'armeabi-v7a'
+            // Native libraries supplied by InspireFace 1.2.4.
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
         }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -59,11 +69,7 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    externalNativeBuild {
-        ndkBuild {
-            path file('src/main/cpp/Android.mk')
-        }
-    }
+    buildFeatures { buildConfig true }
 }
 
 dependencies {
@@ -77,8 +83,11 @@ dependencies {
     implementation libs.camera.lifecycle
     implementation libs.camera.view
     implementation libs.exifinterface
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    testImplementation 'org.json:json:20240303'
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
-    implementation libs.inspireface.android.sdk
+    implementation project(':inspireface-sdk')
 }

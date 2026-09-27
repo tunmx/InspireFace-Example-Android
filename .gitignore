@@ -23,4 +23,13 @@ Thumbs.db
 *.jks
 *.keystore
 /keystore.properties
+/plus.local.properties
 /app/release/
+
+# --- Local migration notes, logs and generated verification reports ---
+*.log
+*.log.*
+/logs/
+/docs/plus-liveness-integration.md
+/docs/sdk-migration-notes.md
+/inspireface-sdk/sdk-info/verification.json

@@ -321,8 +321,7 @@ final class LivenessController {
         // Pre-warm the SDK's 10-call action window during get-ready so the first
         // challenge is detectable the moment it is shown.
         InspireFace.MultipleFacePipelineProcess(session, stream, faces, actionParam);
-        // angles[] is only trustworthy at index 0 — the 1.2.0 JNI writes face[0]'s angles
-        // into every slot. We require exactly one face here, so idx is always 0.
+        // Get-ready requires one frontal face before starting the action challenge.
         boolean frontal = Math.abs(faces.angles[idx].yaw) <= MAX_START_YAW_DEG
                 && Math.abs(faces.angles[idx].pitch) <= MAX_START_PITCH_DEG;
         if (!frontal) {

@@ -1,0 +1,72 @@
+plugins {
+    alias(libs.plugins.android.library)
+}
+
+version = '1.2.4'
+
+// The native SDK distribution contains supplementary Java APIs, not the base SDK.
+// Recompile the base sources with our updated CustomParameter and reuse its assets.
+// The old AAR is never an implementation dependency, so its .so cannot enter the APK.
+configurations {
+    baseSdkSources {
+        canBeConsumed = false
+        transitive = false
+    }
+    baseSdkAssets {
+        canBeConsumed = false
+        transitive = false
+    }
+}
+
+dependencies {
+    baseSdkSources "com.github.HyperInspire:inspireface-android-sdk:${libs.versions.inspirefaceJavaBase.get()}:sources@jar"
+    baseSdkAssets libs.inspireface.android.base
+    testImplementation libs.junit
+}
+
+def prepareSdkSources = tasks.register('prepareSdkSources', Sync) {
+    def patchedClasses = [
+            'com/insightface/sdk/inspireface/base/CustomParameter.java',
+            'com/insightface/sdk/inspireface/base/FaceBasicToken.java'
+    ]
+    // Invalidate generated sources when the set of local JNI compatibility classes changes.
+    inputs.property('patchedClasses', patchedClasses)
+    from(configurations.baseSdkSources.elements.map { zipTree(it.iterator().next().asFile) }) {
+        include 'com/**/*.java'
+        exclude patchedClasses
+    }
+    into layout.buildDirectory.dir('generated/sdk/java')
+}
+
+def prepareSdkAssets = tasks.register('prepareSdkAssets', Sync) {
+    from(configurations.baseSdkAssets.elements.map { zipTree(it.iterator().next().asFile) }) {
+        include 'assets/**'
+    }
+    into layout.buildDirectory.dir('generated/sdk/model-assets')
+}
+
+android {
+    namespace 'com.insightface.sdk.inspireface'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    sourceSets {
+        main {
+            java.srcDir layout.buildDirectory.dir('generated/sdk/java')
+            assets.srcDir layout.buildDirectory.dir('generated/sdk/model-assets/assets')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn prepareSdkSources, prepareSdkAssets
+}

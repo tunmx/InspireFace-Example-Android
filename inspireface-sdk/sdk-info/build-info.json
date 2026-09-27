@@ -1,0 +1,25 @@
+{
+  "version": "1.2.4",
+  "built_at_utc": "2026-09-20T17:04:53.706769+00:00",
+  "source_commit": "62ad6b758f5f38cdb2bb5e052af618da118b37cc",
+  "source_tracked_changes": "",
+  "thirdparty_commit": "1730d9df7cd2dbd4a5feac1933924bbaed45a7d9",
+  "thirdparty_tracked_changes": "",
+  "ndk": "28.1.13356709 (r28b)",
+  "cmake": "3.31.0",
+  "build_type": "Release",
+  "android_api": 21,
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86_64"
+  ],
+  "cxx_runtime": "c++_static",
+  "mnn_version": "2.8.2",
+  "mnn_linkage": "static",
+  "inference_backend": "CPU",
+  "model_packs_included": false,
+  "java_sources": "Supplementary capture interfaces; requires base Java SDK classes",
+  "build_command": "ANDROID_NDK=/path/to/android-ndk-r28b VERSION=1.2.4 bash -e command/build_android.sh",
+  "log": "../android-sdk-logs/build-1.2.4.log"
+}
