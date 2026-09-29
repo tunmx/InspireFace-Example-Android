@@ -1,6 +1,6 @@
 # InspireFace Android Example
 
-A CameraX-based InspireFace Android SDK (1.2.4) example. The launcher is a square-grid
+A CameraX-based InspireFace Android SDK (1.2.4.post1) example. The launcher is a square-grid
 feature menu with a global model selector (`Pikachu` / `Megatron`). The selected model is
 loaded when a feature page opens.
 
@@ -206,24 +206,44 @@ therefore opens a different native database as well as a different crop/metadata
    The old landmark compatibility bridge has been removed: its `0x200` flag now means
    face pose, not landmark detection. Per-face Euler angles are also fixed upstream.
 
-## SDK 1.2.4 integration
+## SDK 1.2.4.post1 integration
 
-The app depends on the local [`inspireface-sdk`](inspireface-sdk/README.md) library module.
-It bundles the supplied 1.2.4 native libraries for `arm64-v8a`, `armeabi-v7a` and `x86_64`,
-plus the new `FaceCapture` / `FaceDetectionSnapshot` Java extensions. No absolute path to
-the original SDK build is required.
+The app consumes the complete SDK AAR: Java APIs, all three native ABIs, Pikachu/Megatron
+model packs and JNI consumer rules come from the same package. The former
+`inspireface-sdk` shim and its 1.2.0 source/asset dependencies have been removed.
+The Android artifact version is **1.2.4.post1**; the native core still reports **1.2.4**,
+with **C API level 2**. `FaceEngine` logs all of these and the dependency source.
 
-The supplied distribution is a native SDK, not a complete AAR. Gradle obtains the base
-Java sources and existing Pikachu/Megatron model assets from the published **1.2.0**
-artifact. It recompiles those sources with a patched `CustomParameter` containing the
-1.2.4 JNI fields `enableFacePose` and `enableFaceEmotion`, and `FaceBasicToken` with an
-owned `byte[] data` payload and `int size`. The old AAR's `classes.jar` and
-native libraries are never packaged. The remaining `1.2.0` entry in the version catalog
-therefore identifies the Java/model source only; the running native SDK is **1.2.4**.
+The default dependency source is JitPack (`inspirefaceSdkSource=jitpack` in
+`gradle.properties`), using the published coordinate
+`com.github.HyperInspire:inspireface-android-sdk:v1.2.4.post1`. The leading `v` is part
+of the published version. See the [JitPack release](https://jitpack.io/#HyperInspire/inspireface-android-sdk/v1.2.4.post1).
+JitPack mode never includes or falls back to a local AAR.
 
-`FaceEngine` logs the actual native version when launching a model. The existing camera
-enrollment UI retains its stability/countdown flow; the new capture APIs are available
-in the SDK module.
+```sh
+./gradlew --refresh-dependencies \
+  :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug \
+  :app:assembleDebugAndroidTest
+# Run on a connected Android device (includes local inference; no PLUS cloud requests):
+./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:dependencyInsight \
+  --dependency inspireface-android-sdk --configuration debugRuntimeClasspath
+```
+
+To explicitly test a local SDK build, build `:inspireface:assembleRelease` in the SDK
+repository, then copy `sdk.local.properties.example` to `sdk.local.properties` and set
+`aarPath` to its `inspireface/build/outputs/aar/inspireface-release.aar`. This
+machine-specific file is ignored by Git. Alternatively, pass
+`-PinspirefaceSdkAar=/absolute/path/to/the.aar` together with
+`-PinspirefaceSdkSource=local`. The AAR is consumed directly; rebuild it in the SDK
+repository after SDK changes.
+
+```sh
+./gradlew -PinspirefaceSdkSource=local :app:assembleDebug :app:testDebugUnitTest
+```
+
+See [the migration analysis and verification record](docs/sdk-1.2.4.post1-upgrade.md)
+for API changes, model compatibility and test scope.
 
 ## Tunables
 
@@ -243,8 +263,8 @@ At the top of `LivenessController`:
 
 - JDK 17 (required by AGP 8.6.1; Android Studio's embedded JDK works)
 - Android Studio Ladybug+ — the Gradle 8.7 wrapper is committed, no local Gradle needed
-- Network access to `google()`, `mavenCentral()` and `jitpack.io` on first sync
-  (the base Java sources and bundled model packs resolve from JitPack)
+- Network access to `google()`, `mavenCentral()` and `jitpack.io` on first sync.
+  Explicit local SDK mode requires the complete release AAR.
 - An ARM or x86_64 Android device/emulator running Android 7.0 / API 24 or newer. The app compiles and targets
   Android 15 / API 35; Android has no declared upper install limit.
 - The native SDK ships `arm64-v8a`, `armeabi-v7a` and `x86_64`; 32-bit x86 is unsupported.

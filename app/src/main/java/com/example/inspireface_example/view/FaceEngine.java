@@ -3,6 +3,7 @@ package com.example.inspireface_example.view;
 import android.content.Context;
 import android.util.Log;
 
+import com.example.inspireface_example.BuildConfig;
 import com.example.inspireface_example.DetectorDefaults;
 import com.example.inspireface_example.FaceModelPrefs;
 import com.insightface.sdk.inspireface.InspireFace;
@@ -74,7 +75,10 @@ public final class FaceEngine {
         }
         if (!launched) {
             InspireFaceVersion version = InspireFace.QueryInspireFaceVersion();
-            Log.i(TAG, "Native SDK " + version.major + "." + version.minor + "." + version.patch);
+            Log.i(TAG, "Android SDK " + BuildConfig.INSPIREFACE_SDK_VERSION
+                    + " (" + BuildConfig.INSPIREFACE_SDK_SOURCE + "), native "
+                    + version.major + "." + version.minor + "." + version.patch
+                    + ", C API " + InspireFace.QueryCAPILevel());
             launched = Boolean.TRUE.equals(
                     InspireFace.GlobalLaunch(context.getApplicationContext(), requestedModel));
             launchedModel = launched ? requestedModel : null;
@@ -228,7 +232,12 @@ public final class FaceEngine {
     }
 
     public static synchronized void releaseSession(Session session) {
-        InspireFace.ReleaseSession(session);
+        // 1.2.4.post1 clears the handle on close. Match its idempotent release contract
+        // so repeated cleanup cannot make an unrelated live session disappear from the count.
+        if (session == null || session.isClosed()) {
+            return;
+        }
+        session.close();
         if (activeSessions > 0) {
             activeSessions--;
         }

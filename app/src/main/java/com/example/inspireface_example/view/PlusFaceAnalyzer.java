@@ -51,22 +51,21 @@ final class PlusFaceAnalyzer implements ImageAnalysis.Analyzer {
         } catch (RuntimeException e) { listener.onEngineError(); return; }
         finally { image.close(); }
         if (released) return;
-        ImageStream stream = null;
         try {
             byte[] upright = converter.rotateUpright(nv21, width, height, rotation);
             int w = rotation % 180 == 0 ? width : height, h = rotation % 180 == 0 ? height : width;
             if (session == null) session = FaceEngine.createPlusSession();
             if (session == null) { released = true; listener.onEngineError(); return; }
-            stream = InspireFace.CreateImageStreamFromByteBuffer(upright, w, h,
-                    InspireFace.STREAM_YUV_NV21, InspireFace.CAMERA_ROTATION_0);
-            if (stream == null) { listener.onEngineError(); return; }
-            MultipleFaceData faces = InspireFace.ExecuteFaceTrack(session, stream);
-            PlusCameraController.Metadata meta = camera.metadata(timestamp);
-            FaceFrame observation = observe(faces, stream, meta, timestamp, w, h, rotation);
-            coordinator.offer(generation, observation, () -> RgbPixels.cropNv21(upright, observation));
-            listener.onFrame(generation, observation);
+            try (ImageStream stream = InspireFace.CreateImageStreamFromByteBuffer(upright, w, h,
+                    InspireFace.STREAM_YUV_NV21, InspireFace.CAMERA_ROTATION_0)) {
+                if (stream == null) { listener.onEngineError(); return; }
+                MultipleFaceData faces = InspireFace.ExecuteFaceTrack(session, stream);
+                PlusCameraController.Metadata meta = camera.metadata(timestamp);
+                FaceFrame observation = observe(faces, stream, meta, timestamp, w, h, rotation);
+                coordinator.offer(generation, observation, () -> RgbPixels.cropNv21(upright, observation));
+                listener.onFrame(generation, observation);
+            }
         } catch (RuntimeException e) { listener.onEngineError(); }
-        finally { if (stream != null) InspireFace.ReleaseImageStream(stream); }
     }
 
     private FaceFrame observe(MultipleFaceData faces, ImageStream stream, PlusCameraController.Metadata meta,

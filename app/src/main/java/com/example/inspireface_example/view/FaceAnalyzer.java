@@ -21,8 +21,8 @@ import com.insightface.sdk.inspireface.base.Session;
  * orientation. Everything runs on the single-threaded analysis executor, which also
  * keeps all session calls serialized. The ImageProxy is closed as soon as the NV21 copy
  * exists so CameraX can refill the buffer while inference runs, and the stream is
- * created, used and released within this frame because the SDK aliases the byte[]
- * rather than copying it.
+ * created, used and released within this frame. The SDK retains its own native copy
+ * of the pixels until the stream is closed.
  */
 final class FaceAnalyzer extends UprightFaceCameraAnalyzer {
 
